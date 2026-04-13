@@ -1,0 +1,44 @@
+{
+  "name": "dipy-prisma",
+  "version": "0.2.0",
+  "description": "Prisma thread store for DIPY",
+  "license": "Apache-2.0",
+  "author": "Iurii Favi <iurii.favi@gmail.com>",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown && tsc -p tsconfig.json --emitDeclarationOnly",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist node_modules *.tsbuildinfo"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=6.0.0",
+    "dipy": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "dipy": "file:../dipy",
+    "tsdown": "^0.4.0",
+    "typescript": "6.0.2",
+    "vitest": "^3.0.8"
+  }
+}
