@@ -1,13 +1,25 @@
 import type { Persistable } from 'dipy';
 import { deserializePersisted, serializePersisted } from 'dipy/store';
-import type { DipyEventRecord, DipySnapshot, DipyThread, SnapshotMeta, ThreadStore } from 'dipy/store';
+import type {
+  DipyEventRecord,
+  DipySnapshot,
+  DipyThread,
+  SnapshotMeta,
+  ThreadStore,
+} from 'dipy/store';
 
 export interface PrismaLikeDelegate {
   create(args: Record<string, unknown>): Promise<Record<string, unknown>>;
   deleteMany?(args: Record<string, unknown>): Promise<unknown>;
-  findFirst?(args: Record<string, unknown>): Promise<Record<string, unknown> | null>;
-  findMany(args: Record<string, unknown>): Promise<Array<Record<string, unknown>>>;
-  findUnique?(args: Record<string, unknown>): Promise<Record<string, unknown> | null>;
+  findFirst?(
+    args: Record<string, unknown>
+  ): Promise<Record<string, unknown> | null>;
+  findMany(
+    args: Record<string, unknown>
+  ): Promise<Array<Record<string, unknown>>>;
+  findUnique?(
+    args: Record<string, unknown>
+  ): Promise<Record<string, unknown> | null>;
   update?(args: Record<string, unknown>): Promise<Record<string, unknown>>;
   updateMany?(args: Record<string, unknown>): Promise<unknown>;
   upsert?(args: Record<string, unknown>): Promise<Record<string, unknown>>;
@@ -34,13 +46,17 @@ function randomUUID(options?: { disableEntropyCache?: boolean }): string {
   }
 
   if (!cryptoImpl || typeof cryptoImpl.getRandomValues !== 'function') {
-    throw new Error('randomUUID requires globalThis.crypto.randomUUID or getRandomValues support');
+    throw new Error(
+      'randomUUID requires globalThis.crypto.randomUUID or getRandomValues support'
+    );
   }
 
   const bytes = cryptoImpl.getRandomValues(new Uint8Array(16));
   bytes[6] = (bytes[6]! & 0x0f) | 0x40;
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (value: number) => value.toString(16).padStart(2, '0')).join('');
+  const hex = Array.from(bytes, (value: number) =>
+    value.toString(16).padStart(2, '0')
+  ).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -49,7 +65,9 @@ function asDate(value: unknown): Date {
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 export class PrismaThreadStore<
@@ -70,7 +88,9 @@ export class PrismaThreadStore<
       data: {
         projectId: opts.projectId,
         id: opts.threadId,
-        ...(opts.metadata ? { metadata: serializePersisted(opts.metadata) } : {}),
+        ...(opts.metadata
+          ? { metadata: serializePersisted(opts.metadata) }
+          : {}),
       },
     });
     return {
@@ -84,10 +104,16 @@ export class PrismaThreadStore<
     };
   }
 
-  async getThread(threadId: string, opts?: { projectId?: string }): Promise<DipyThread | null> {
+  async getThread(
+    threadId: string,
+    opts?: { projectId?: string }
+  ): Promise<DipyThread | null> {
     let thread: Record<string, unknown> | null;
     if (opts?.projectId) {
-      const where: Record<string, unknown> = { id: threadId, projectId: opts.projectId };
+      const where: Record<string, unknown> = {
+        id: threadId,
+        projectId: opts.projectId,
+      };
       thread = this.prisma.thread.findFirst
         ? await this.prisma.thread.findFirst({ where })
         : this.prisma.thread.findUnique
@@ -96,7 +122,9 @@ export class PrismaThreadStore<
     } else {
       thread = this.prisma.thread.findUnique
         ? await this.prisma.thread.findUnique({ where: { id: threadId } })
-        : ((await this.prisma.thread.findFirst?.({ where: { id: threadId } })) ?? null);
+        : ((await this.prisma.thread.findFirst?.({
+            where: { id: threadId },
+          })) ?? null);
     }
     if (!thread || thread['deletedAt'] != null) {
       return null;
@@ -128,7 +156,10 @@ export class PrismaThreadStore<
     }));
   }
 
-  async deleteThread(threadId: string, opts?: { projectId?: string }): Promise<void> {
+  async deleteThread(
+    threadId: string,
+    opts?: { projectId?: string }
+  ): Promise<void> {
     const where: Record<string, unknown> = { id: threadId };
     if (opts?.projectId) {
       where['projectId'] = opts.projectId;
@@ -148,19 +179,24 @@ export class PrismaThreadStore<
   async saveMessages(
     threadId: string,
     messages: UIMessage[],
-    opts?: { projectId?: string },
+    opts?: { projectId?: string }
   ): Promise<void> {
     if (opts?.projectId) {
-      const thread = await this.getThread(threadId, { projectId: opts.projectId });
+      const thread = await this.getThread(threadId, {
+        projectId: opts.projectId,
+      });
       if (!thread) {
         throw new Error(
-          `Thread "${threadId}" not found or does not belong to project "${opts.projectId}"`,
+          `Thread "${threadId}" not found or does not belong to project "${opts.projectId}"`
         );
       }
     }
     for (const message of messages) {
       const record = asRecord(message);
-      const id = typeof record['id'] === 'string' ? record['id'] : `${threadId}-${randomUUID()}`;
+      const id =
+        typeof record['id'] === 'string'
+          ? record['id']
+          : `${threadId}-${randomUUID()}`;
       const createPayload = {
         createdAt: new Date(),
         id,
@@ -193,7 +229,10 @@ export class PrismaThreadStore<
           'code' in error &&
           (error as { code: string }).code === 'P2002';
         if (isPrismaUniqueViolation) {
-          await this.prisma.message.updateMany?.({ where: { id }, data: updatePayload });
+          await this.prisma.message.updateMany?.({
+            where: { id },
+            data: updatePayload,
+          });
         } else {
           throw error;
         }
@@ -201,9 +240,14 @@ export class PrismaThreadStore<
     }
   }
 
-  async loadMessages(threadId: string, opts?: { projectId?: string }): Promise<UIMessage[]> {
+  async loadMessages(
+    threadId: string,
+    opts?: { projectId?: string }
+  ): Promise<UIMessage[]> {
     if (opts?.projectId) {
-      const thread = await this.getThread(threadId, { projectId: opts.projectId });
+      const thread = await this.getThread(threadId, {
+        projectId: opts.projectId,
+      });
       if (!thread) {
         return [];
       }
@@ -219,7 +263,10 @@ export class PrismaThreadStore<
     })) as UIMessage[];
   }
 
-  async deleteMessage(messageId: string, opts?: { projectId?: string }): Promise<void> {
+  async deleteMessage(
+    messageId: string,
+    opts?: { projectId?: string }
+  ): Promise<void> {
     const where: Record<string, unknown> = { id: messageId };
     if (opts?.projectId) {
       where['id'] = messageId;
@@ -230,7 +277,7 @@ export class PrismaThreadStore<
   async saveSnapshot(runId: string, snapshot: DipySnapshot): Promise<void> {
     if (snapshot.runId && snapshot.runId !== runId) {
       throw new Error(
-        `saveSnapshot: runId mismatch — argument "${runId}" vs snapshot.runId "${snapshot.runId}"`,
+        `saveSnapshot: runId mismatch — argument "${runId}" vs snapshot.runId "${snapshot.runId}"`
       );
     }
     const data = {
@@ -264,7 +311,11 @@ export class PrismaThreadStore<
     try {
       data = deserializePersisted<DipySnapshot>(row['data']);
     } catch (error) {
-      console.error('Failed to deserialize DipySnapshot for row:', row['id'], error);
+      console.error(
+        'Failed to deserialize DipySnapshot for row:',
+        row['id'],
+        error
+      );
       return null;
     }
     return {
@@ -295,20 +346,22 @@ export class PrismaThreadStore<
             timestamp: new Date(event.timestamp),
             type: event.type,
           },
-        }),
-      ),
+        })
+      )
     );
   }
 
   async loadEvents(
     runId: string,
-    opts?: { after?: { id: string; timestamp: number } },
+    opts?: { after?: { id: string; timestamp: number } }
   ): Promise<DipyEventRecord[]> {
     const rows = await this.prisma.runEvent.findMany({
       orderBy: { timestamp: 'asc' },
       where: {
         runId,
-        ...(opts?.after ? { timestamp: { gt: new Date(opts.after.timestamp) } } : {}),
+        ...(opts?.after
+          ? { timestamp: { gt: new Date(opts.after.timestamp) } }
+          : {}),
       },
     });
     return rows.map((row) => ({
@@ -318,7 +371,11 @@ export class PrismaThreadStore<
     }));
   }
 
-  async saveMemoizedResult(runId: string, stepKey: string, result: Persistable): Promise<void> {
+  async saveMemoizedResult(
+    runId: string,
+    stepKey: string,
+    result: Persistable
+  ): Promise<void> {
     const data = {
       result: serializePersisted(result),
       runId,
@@ -358,7 +415,10 @@ export class PrismaThreadStore<
       where: { runId },
     });
     return new Map(
-      rows.map((row) => [String(row['stepKey']), deserializePersisted<Persistable>(row['result'])]),
+      rows.map((row) => [
+        String(row['stepKey']),
+        deserializePersisted<Persistable>(row['result']),
+      ])
     );
   }
 }

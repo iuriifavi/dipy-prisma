@@ -13,7 +13,9 @@ function createDelegate(rows: Array<Record<string, unknown>>) {
       if (!args.where) return;
       for (let index = rows.length - 1; index >= 0; index -= 1) {
         const row = rows[index]!;
-        const matches = Object.entries(args.where).every(([key, value]) => row[key] === value);
+        const matches = Object.entries(args.where).every(
+          ([key, value]) => row[key] === value
+        );
         if (matches) {
           rows.splice(index, 1);
         }
@@ -33,16 +35,23 @@ function createDelegate(rows: Array<Record<string, unknown>>) {
       const filtered = rows.filter((row) => {
         if (!args.where) return true;
         return Object.entries(args.where).every(([key, value]) => {
-          if (value && typeof value === 'object' && 'gt' in (value as Record<string, unknown>)) {
+          if (
+            value &&
+            typeof value === 'object' &&
+            'gt' in (value as Record<string, unknown>)
+          ) {
             return (
               new Date(String(row[key])).getTime() >
-              new Date(String((value as Record<string, unknown>)['gt'])).getTime()
+              new Date(
+                String((value as Record<string, unknown>)['gt'])
+              ).getTime()
             );
           }
           return row[key] === value;
         });
       });
-      const [orderKey, orderDirection] = Object.entries(args.orderBy ?? {})[0] ?? [];
+      const [orderKey, orderDirection] =
+        Object.entries(args.orderBy ?? {})[0] ?? [];
       if (!orderKey) {
         return filtered.map((row) => ({ ...row }));
       }
@@ -66,13 +75,16 @@ function createDelegate(rows: Array<Record<string, unknown>>) {
     async findUnique(args: { where: Record<string, unknown> }) {
       return (
         rows.find((row) =>
-          Object.entries(args.where).every(([key, value]) => row[key] === value),
+          Object.entries(args.where).every(([key, value]) => row[key] === value)
         ) ?? null
       );
     },
-    async update(args: { where: Record<string, unknown>; data: Record<string, unknown> }) {
+    async update(args: {
+      where: Record<string, unknown>;
+      data: Record<string, unknown>;
+    }) {
       const row = rows.find((entry) =>
-        Object.entries(args.where).every(([key, value]) => entry[key] === value),
+        Object.entries(args.where).every(([key, value]) => entry[key] === value)
       );
       if (!row) {
         throw new Error('Row not found');
@@ -85,7 +97,9 @@ function createDelegate(rows: Array<Record<string, unknown>>) {
       update: Record<string, unknown>;
       where: Record<string, unknown>;
     }) {
-      const existing = await this.findUnique({ where: flattenWhere(args.where) });
+      const existing = await this.findUnique({
+        where: flattenWhere(args.where),
+      });
       if (existing) {
         Object.assign(existing, args.update);
         return { ...existing };
@@ -112,7 +126,11 @@ describe('PrismaThreadStore', () => {
     const runSnapshotRows: Array<Record<string, unknown>> = [];
     const memoizedRows: Array<Record<string, unknown>> = [];
 
-    const store = new PrismaThreadStore<{ id: string; role: string; parts?: unknown[] }>({
+    const store = new PrismaThreadStore<{
+      id: string;
+      role: string;
+      parts?: unknown[];
+    }>({
       prisma: {
         memoizedResult: createDelegate(memoizedRows),
         message: createDelegate(messageRows),
@@ -135,20 +153,35 @@ describe('PrismaThreadStore', () => {
     });
 
     await store.saveMessages('thread-1', [
-      { id: 'm1', role: 'user', parts: [{ submittedAt: new Date('2026-03-21T10:00:00.000Z') }] },
+      {
+        id: 'm1',
+        role: 'user',
+        parts: [{ submittedAt: new Date('2026-03-21T10:00:00.000Z') }],
+      },
       { id: 'm2', role: 'assistant', parts: [{ tags: new Set(['ready']) }] },
     ]);
     expect(await store.loadMessages('thread-1')).toEqual([
-      { id: 'm1', parts: [{ submittedAt: new Date('2026-03-21T10:00:00.000Z') }], role: 'user' },
+      {
+        id: 'm1',
+        parts: [{ submittedAt: new Date('2026-03-21T10:00:00.000Z') }],
+        role: 'user',
+      },
       { id: 'm2', parts: [{ tags: new Set(['ready']) }], role: 'assistant' },
     ]);
 
     const snapshot: DipySnapshot = {
-      agentStates: { root: { reviewedAt: new Date('2026-03-21T12:10:00.000Z'), step: 1 } },
+      agentStates: {
+        root: { reviewedAt: new Date('2026-03-21T12:10:00.000Z'), step: 1 },
+      },
       createdAt: new Date('2026-03-21T12:00:00.000Z'),
       delegationStack: { lineage: ['root'], reviewers: new Set(['alice']) },
-      middlewareState: { audit: { enabled: true, totals: new Map([['steps', 1]]) } },
-      nodeTree: { id: 'root', lastCompactedAt: new Date('2026-03-21T12:01:00.000Z') },
+      middlewareState: {
+        audit: { enabled: true, totals: new Map([['steps', 1]]) },
+      },
+      nodeTree: {
+        id: 'root',
+        lastCompactedAt: new Date('2026-03-21T12:01:00.000Z'),
+      },
       reason: 'periodic',
       runId: 'run-1',
       stepNumber: 1,
@@ -166,7 +199,11 @@ describe('PrismaThreadStore', () => {
         timestamp: 10,
         type: 'agent:mount',
       },
-      { data: { labels: new Set(['analysis']), step: 2 }, timestamp: 20, type: 'agent:step' },
+      {
+        data: { labels: new Set(['analysis']), step: 2 },
+        timestamp: 20,
+        type: 'agent:step',
+      },
     ]);
     expect(await store.loadEvents('run-1')).toEqual([
       {
@@ -174,7 +211,11 @@ describe('PrismaThreadStore', () => {
         timestamp: 10,
         type: 'agent:mount',
       },
-      { data: { labels: new Set(['analysis']), step: 2 }, timestamp: 20, type: 'agent:step' },
+      {
+        data: { labels: new Set(['analysis']), step: 2 },
+        timestamp: 20,
+        type: 'agent:step',
+      },
     ]);
 
     await store.saveMemoizedResult('run-1', 'step-1', {
